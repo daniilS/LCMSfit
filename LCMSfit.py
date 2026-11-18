@@ -26,8 +26,8 @@ except ImportError:
     import sys
     
     pip_command = "pip" if platform.system == "Windows" else "python3 -m pip"
-    
-    if sys.argv[0] != "" and pip.__version__.split(".")[0] >= 26:
+
+    if sys.argv[0] != "" and int(pip.__version__.split(".")[0]) >= 26:
         install_command = f"install --requirements-from-script {sys.argv[0]}"
     else:
         install_command = "install numpy scipy pybaselines matplotlib"
