@@ -238,7 +238,7 @@ class LCMSfit(tk.Tk):
                 filetypes=[["CSV file", "*.csv"]],
                 defaultextension=".csv",
                 initialdir=input_path.parent,
-                initialfile=input_path.stem + "_baseline_corrected_points.csv",
+                initialfile=input_path.stem + "_baseline_corrected_trace.csv",
             )
             if not output_filename:
                 return
