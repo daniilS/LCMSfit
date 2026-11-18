@@ -1,14 +1,42 @@
+# /// script
+# dependencies = [
+#   "numpy",
+#   "scipy",
+#   "pybaselines",
+#   "matplotlib",
+# ]
+# ///
+
+
 import tkinter as tk
 from pathlib import Path
 from tkinter import messagebox, ttk
 from tkinter.filedialog import askopenfilename, asksaveasfilename
 
-import numpy as np
-import pybaselines
-from matplotlib.backend_bases import _Mode
-from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolbar2Tk
-from matplotlib.figure import Figure
-from scipy.optimize import curve_fit
+try:
+    import numpy as np
+    import pybaselines
+    from matplotlib.backend_bases import _Mode
+    from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolbar2Tk
+    from matplotlib.figure import Figure
+    from scipy.optimize import curve_fit
+except ImportError:
+    import pip
+    import platform
+    import sys
+    
+    pip_command = "pip" if platform.system == "Windows" else "python3 -m pip"
+    
+    if sys.argv[0] !== "" and pip.__version__.split(".")[0] >= 26:
+        install_command = f"{install --requirements-from-script {sys.argv[0]}"
+    else:
+        install_command = "install numpy scipy pybaselines matplotlib"
+
+    message = f"Failed to import dependencies. Please install them using the following command:\n\n{pip_command} {install_command}"
+    
+    messagebox.showerror("Error", message)
+    raise
+    
 
 ICON_DATA =  r"R0lGODlhMAAwAPUAAAAAAJa5oJW6oJS7oJW7oJS6oZW6oZW7oZa7oJa6oZa7oZe7oZS6opS7opW7opa6ope7ope7o5W8oJS8oZW8oZa8oZW8opa8opi7o5i8pJm8pJ+7qJ+7qaC7qaK7qqK7q6S7raW7rae7rq+7s7K7trO7t7S7uLe7u7m5ubi6urm6uri7u7m7u7q6urq7u7i8vLm8vLm9vbq8vLu8vAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACH5BAEAAAAALAAAAAAwADAAAAbTQIBwSCwaj8ikcslsOp/QqHRKrVqv2Kx2y+0CYDCVt6kqm8Vj5PkMSxvXa3cRHpcL6Wf7HV/Wf/l+e3BtSggIZDAmS3R3RoaPkG+DhEdlYUOWQ5Cbj0NhfCqUS2GEFZynGaB1T6anpyKqZqJLra6cGCSxfU62th26u7S9tibATcO2sMZLyK6/y4XNnM+6TNKcG8Bo0deP1LHW3Y/K1czihrnl4d3Z0MLdI7qXvNfk4FDSqe6syEKfoFUM1Yo0h86sgAJHgdkWqKHDhxAjSpxIsWKTIAA7"
 
@@ -34,7 +62,7 @@ class LCMSfit(tk.Tk):
         if not self.filename:
             raise SystemExit("No file selected")
 
-        self.xdata, self.ydata = np.genfromtxt(self.filename, delimiter=",").T
+        self.xdata, self.ydata = np.genfromtxt(self.filename, delimiter=",", encoding="utf-8-sig").T
         self.peaks = []
         self.peak_artists = []
 
@@ -46,10 +74,10 @@ class LCMSfit(tk.Tk):
         self.canvas = FigureCanvasTkAgg(self.fig, master=self)
         self.canvas.mpl_connect("button_press_event", self.onclick)
         self.canvas.draw()
-        self.canvas.get_tk_widget().grid(row=0, column=0, columnspan=2, sticky="nesw")
+        self.canvas.get_tk_widget().grid(row=0, column=0, columnspan=3, sticky="nesw")
 
         self.toolbar = NavigationToolbar2Tk(self.canvas, self, pack_toolbar=False)
-        self.toolbar.grid(row=1, column=0, columnspan=2, sticky="nesw")
+        self.toolbar.grid(row=1, column=0, columnspan=3, sticky="nesw")
 
         self.baseline_label = ttk.Label(self, text="Baseline smoothness:")
         self.baseline_label.grid(row=2, column=0, sticky="nesw", pady=10, padx=(10, 0))
@@ -57,18 +85,23 @@ class LCMSfit(tk.Tk):
         self.slider = ttk.Scale(
             self, from_=-2, to=11, value=5, command=self.fit_baseline
         )
-        self.slider.grid(row=2, column=1, sticky="nesw", pady=10, padx=20)
+        self.slider.grid(row=2, column=1, columnspan=2, sticky="nesw", pady=10, padx=20)
         self.fit_baseline()
 
         self.fit_button = ttk.Button(self, text="Fit", command=self.fitpeaks)
         self.fit_button.grid(row=4, column=0, sticky="w", padx=(10, 0), pady=(0, 10))
 
         self.save_button = ttk.Button(
-            self, text="Save", command=self.savepeaks, state="disabled"
+            self, text="Save peaks", command=self.savepeaks, state="disabled"
         )
         self.save_button.grid(row=4, column=1, sticky="w", padx=(10, 0), pady=(0, 10))
+        
+        self.save_curves_button = ttk.Button(
+            self, text="Save baseline corrected trace", command=self.savecurves, state="disabled"
+        )
+        self.save_curves_button.grid(row=4, column=2, sticky="w", padx=(10, 0), pady=(0, 10))
 
-        self.columnconfigure(1, weight=1)
+        self.columnconfigure(2, weight=1)
         self.rowconfigure(0, weight=1)
 
         self.title("Select peaks to fit")
@@ -115,7 +148,10 @@ class LCMSfit(tk.Tk):
             self.ydata, lam=self.lambda_baseline, x_data=self.xdata, k=max(self.ydata)/2
         )
         if hasattr(self, "baseline_plot"):
-            self.baseline_plot.remove()
+            try:
+                self.baseline_plot.remove()
+            except NotImplementedError:
+                pass
         self.baseline_plot = self.ax.plot(
             self.xdata, self.baseline, color="red", linewidth=0.5
         )[0]
@@ -162,6 +198,7 @@ class LCMSfit(tk.Tk):
         self.canvas.draw()
 
         self.save_button["state"] = "!disabled"
+        self.save_curves_button["state"] = "!disabled"
 
     def model_function(self, x, *args):
         peaks = np.zeros_like(x)
@@ -194,6 +231,24 @@ class LCMSfit(tk.Tk):
                     f.write(f"{time},{area}\n")
         except Exception as e:
             messagebox.showerror("Error", str(e))
+
+    def savecurves(self):
+            input_path = Path(self.filename)
+            output_filename = asksaveasfilename(
+                filetypes=[["CSV file", "*.csv"]],
+                defaultextension=".csv",
+                initialdir=input_path.parent,
+                initialfile=input_path.stem + "_baseline_corrected_points.csv",
+            )
+            if not output_filename:
+                return
+            try:
+                with open(output_filename, "w") as f:
+                    f.write("time,raw trace,baseline curve,corrected trace\n")
+                    for time, raw_data, baseline_data, corrected_data in zip(self.xdata, self.ydata, self.baseline, self.ydata-self.baseline):
+                        f.write(f"{time},{raw_data},{baseline_data},{corrected_data}\n")
+            except Exception as e:
+                messagebox.showerror("Error", str(e))
 
 
 if __name__ == "__main__":
