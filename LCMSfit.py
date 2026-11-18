@@ -17,14 +17,17 @@ try:
     import numpy as np
     import pybaselines
     from matplotlib.backend_bases import _Mode
-    from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolbar2Tk
+    from matplotlib.backends.backend_tkagg import (
+        FigureCanvasTkAgg,
+        NavigationToolbar2Tk,
+    )
     from matplotlib.figure import Figure
     from scipy.optimize import curve_fit
 except ImportError:
     import pip
     import platform
     import sys
-    
+
     pip_command = "pip" if platform.system == "Windows" else "python3 -m pip"
 
     if sys.argv[0] != "" and int(pip.__version__.split(".")[0]) >= 26:
@@ -33,19 +36,19 @@ except ImportError:
         install_command = "install numpy scipy pybaselines matplotlib"
 
     message = f"Failed to import dependencies. Please install them using the following command:\n\n{pip_command} {install_command}"
-    
+
     messagebox.showerror("Error", message)
     raise
-    
 
-ICON_DATA =  r"R0lGODlhMAAwAPUAAAAAAJa5oJW6oJS7oJW7oJS6oZW6oZW7oZa7oJa6oZa7oZe7oZS6opS7opW7opa6ope7ope7o5W8oJS8oZW8oZa8oZW8opa8opi7o5i8pJm8pJ+7qJ+7qaC7qaK7qqK7q6S7raW7rae7rq+7s7K7trO7t7S7uLe7u7m5ubi6urm6uri7u7m7u7q6urq7u7i8vLm8vLm9vbq8vLu8vAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACH5BAEAAAAALAAAAAAwADAAAAbTQIBwSCwaj8ikcslsOp/QqHRKrVqv2Kx2y+0CYDCVt6kqm8Vj5PkMSxvXa3cRHpcL6Wf7HV/Wf/l+e3BtSggIZDAmS3R3RoaPkG+DhEdlYUOWQ5Cbj0NhfCqUS2GEFZynGaB1T6anpyKqZqJLra6cGCSxfU62th26u7S9tibATcO2sMZLyK6/y4XNnM+6TNKcG8Bo0deP1LHW3Y/K1czihrnl4d3Z0MLdI7qXvNfk4FDSqe6syEKfoFUM1Yo0h86sgAJHgdkWqKHDhxAjSpxIsWKTIAA7"
+
+ICON_DATA = r"R0lGODlhMAAwAPUAAAAAAJa5oJW6oJS7oJW7oJS6oZW6oZW7oZa7oJa6oZa7oZe7oZS6opS7opW7opa6ope7ope7o5W8oJS8oZW8oZa8oZW8opa8opi7o5i8pJm8pJ+7qJ+7qaC7qaK7qqK7q6S7raW7rae7rq+7s7K7trO7t7S7uLe7u7m5ubi6urm6uri7u7m7u7q6urq7u7i8vLm8vLm9vbq8vLu8vAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACH5BAEAAAAALAAAAAAwADAAAAbTQIBwSCwaj8ikcslsOp/QqHRKrVqv2Kx2y+0CYDCVt6kqm8Vj5PkMSxvXa3cRHpcL6Wf7HV/Wf/l+e3BtSggIZDAmS3R3RoaPkG+DhEdlYUOWQ5Cbj0NhfCqUS2GEFZynGaB1T6anpyKqZqJLra6cGCSxfU62th26u7S9tibATcO2sMZLyK6/y4XNnM+6TNKcG8Bo0deP1LHW3Y/K1czihrnl4d3Z0MLdI7qXvNfk4FDSqe6syEKfoFUM1Yo0h86sgAJHgdkWqKHDhxAjSpxIsWKTIAA7"
 
 
 class LCMSfit(tk.Tk):
     def __init__(self):
-        super().__init__()        
+        super().__init__()
         self.withdraw()
-        
+
         icon_image = tk.PhotoImage(data=ICON_DATA)
         self.iconphoto(True, icon_image)
 
@@ -62,7 +65,9 @@ class LCMSfit(tk.Tk):
         if not self.filename:
             raise SystemExit("No file selected")
 
-        self.xdata, self.ydata = np.genfromtxt(self.filename, delimiter=",", encoding="utf-8-sig").T
+        self.xdata, self.ydata = np.genfromtxt(
+            self.filename, delimiter=",", encoding="utf-8-sig"
+        ).T
         self.peaks = []
         self.peak_artists = []
 
@@ -95,11 +100,16 @@ class LCMSfit(tk.Tk):
             self, text="Save peaks", command=self.savepeaks, state="disabled"
         )
         self.save_button.grid(row=4, column=1, sticky="w", padx=(10, 0), pady=(0, 10))
-        
+
         self.save_curves_button = ttk.Button(
-            self, text="Save baseline corrected trace", command=self.savecurves, state="disabled"
+            self,
+            text="Save baseline corrected trace",
+            command=self.savecurves,
+            state="disabled",
         )
-        self.save_curves_button.grid(row=4, column=2, sticky="w", padx=(10, 0), pady=(0, 10))
+        self.save_curves_button.grid(
+            row=4, column=2, sticky="w", padx=(10, 0), pady=(0, 10)
+        )
 
         self.columnconfigure(2, weight=1)
         self.rowconfigure(0, weight=1)
@@ -145,7 +155,10 @@ class LCMSfit(tk.Tk):
 
     def fit_baseline(self, *args, **kwargs):
         self.baseline, _ = pybaselines.whittaker.derpsalsa(
-            self.ydata, lam=self.lambda_baseline, x_data=self.xdata, k=max(self.ydata)/2
+            self.ydata,
+            lam=self.lambda_baseline,
+            x_data=self.xdata,
+            k=max(self.ydata) / 2,
         )
         if hasattr(self, "baseline_plot"):
             try:
@@ -233,22 +246,24 @@ class LCMSfit(tk.Tk):
             messagebox.showerror("Error", str(e))
 
     def savecurves(self):
-            input_path = Path(self.filename)
-            output_filename = asksaveasfilename(
-                filetypes=[["CSV file", "*.csv"]],
-                defaultextension=".csv",
-                initialdir=input_path.parent,
-                initialfile=input_path.stem + "_baseline_corrected_trace.csv",
-            )
-            if not output_filename:
-                return
-            try:
-                with open(output_filename, "w") as f:
-                    f.write("time,raw trace,baseline curve,corrected trace\n")
-                    for time, raw_data, baseline_data, corrected_data in zip(self.xdata, self.ydata, self.baseline, self.ydata-self.baseline):
-                        f.write(f"{time},{raw_data},{baseline_data},{corrected_data}\n")
-            except Exception as e:
-                messagebox.showerror("Error", str(e))
+        input_path = Path(self.filename)
+        output_filename = asksaveasfilename(
+            filetypes=[["CSV file", "*.csv"]],
+            defaultextension=".csv",
+            initialdir=input_path.parent,
+            initialfile=input_path.stem + "_baseline_corrected_trace.csv",
+        )
+        if not output_filename:
+            return
+        try:
+            with open(output_filename, "w") as f:
+                f.write("time,raw trace,baseline curve,corrected trace\n")
+                for time, raw_data, baseline_data, corrected_data in zip(
+                    self.xdata, self.ydata, self.baseline, self.ydata - self.baseline
+                ):
+                    f.write(f"{time},{raw_data},{baseline_data},{corrected_data}\n")
+        except Exception as e:
+            messagebox.showerror("Error", str(e))
 
 
 if __name__ == "__main__":
